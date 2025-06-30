@@ -13,6 +13,7 @@ import com.example.mybestzitendate.ui.WeatherViewModel
 import com.example.mybestzitendate.ui.WeatherUiState
 import com.example.mybestzitendate.ui.components.LocationSearchBar
 import com.example.mybestzitendate.ui.components.WeatherCard
+import com.example.mybestzitendate.ui.components.TwoDayWeatherAdviceCard
 
 @Composable
 fun WeatherScreen(
@@ -25,6 +26,7 @@ fun WeatherScreen(
     val isSearching by viewModel.isSearching.collectAsState()
     val showSearchResults by viewModel.showSearchResults.collectAsState()
     val error by viewModel.error.collectAsState()
+    val dailyWeatherAdviceData by viewModel.dailyWeatherAdviceData.collectAsState()
     
     LaunchedEffect(Unit) {
         viewModel.loadWeatherData()
@@ -37,7 +39,7 @@ fun WeatherScreen(
     ) {
         // タイトル
         Text(
-            text = "自転車に最適な日",
+            text = "2日間の天気アドバイス",
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -104,10 +106,21 @@ fun WeatherScreen(
             }
             
             is WeatherUiState.Success -> {
-                val weatherData = (uiState as WeatherUiState.Success).data
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // 2日間の天気アドバイスを表示
+                    if (dailyWeatherAdviceData.isNotEmpty()) {
+                        item {
+                            TwoDayWeatherAdviceCard(
+                                dailyAdviceList = dailyWeatherAdviceData,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            )
+                        }
+                    }
+                    
+                    // 従来の自転車天気カードも表示（参考用）
+                    val weatherData = (uiState as WeatherUiState.Success).data
                     items(weatherData) { weatherInfo ->
                         WeatherCard(weatherInfo = weatherInfo)
                     }

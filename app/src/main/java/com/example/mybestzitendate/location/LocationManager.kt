@@ -15,10 +15,11 @@ import com.google.android.gms.tasks.OnTokenCanceledListener
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import java.util.*
 
 class LocationManager(private val context: Context) {
     private val fusedLocationClient: FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
-    private val geocoder = Geocoder(context)
+    private val geocoder = Geocoder(context, Locale.JAPANESE)
     
     // 横浜市のデフォルト座標
     private val defaultLatitude = 35.4437
@@ -75,8 +76,21 @@ class LocationManager(private val context: Context) {
             if (!addresses.isNullOrEmpty()) {
                 val address = addresses[0]
                 val city = address.locality ?: ""
+                val state = address.adminArea ?: ""
                 val country = address.countryName ?: ""
-                "$city, $country"
+                
+                when {
+                    country == "日本" -> {
+                        when {
+                            state.isNotEmpty() && city.isNotEmpty() -> "$state$city"
+                            city.isNotEmpty() -> city
+                            else -> "横浜市"
+                        }
+                    }
+                    state.isNotEmpty() && city.isNotEmpty() -> "$city, $state, $country"
+                    city.isNotEmpty() -> "$city, $country"
+                    else -> "横浜市, 日本"
+                }
             } else {
                 "横浜市, 日本"
             }

@@ -6,6 +6,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybestzitendate.data.BicycleWeatherInfo
 import com.example.mybestzitendate.data.LocationSearchResult
+import com.example.mybestzitendate.data.WeatherAdviceInfo
+import com.example.mybestzitendate.data.DailyWeatherAdvice
+import com.example.mybestzitendate.data.AdviceType
 import com.example.mybestzitendate.location.LocationManager
 import com.example.mybestzitendate.repository.WeatherRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +36,18 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
     // 天気データの状態
     private val _weatherData = MutableStateFlow<List<BicycleWeatherInfo>>(emptyList())
     val weatherData: StateFlow<List<BicycleWeatherInfo>> = _weatherData.asStateFlow()
+    
+    // 新しいアドバイスデータの状態
+    private val _weatherAdviceData = MutableStateFlow<List<WeatherAdviceInfo>>(emptyList())
+    val weatherAdviceData: StateFlow<List<WeatherAdviceInfo>> = _weatherAdviceData.asStateFlow()
+    
+    // 日別天気アドバイスデータの状態
+    private val _dailyWeatherAdviceData = MutableStateFlow<List<DailyWeatherAdvice>>(emptyList())
+    val dailyWeatherAdviceData: StateFlow<List<DailyWeatherAdvice>> = _dailyWeatherAdviceData.asStateFlow()
+    
+    // 明日の詳細表示状態
+    private val _isTomorrowExpanded = MutableStateFlow(false)
+    val isTomorrowExpanded: StateFlow<Boolean> = _isTomorrowExpanded.asStateFlow()
     
     // ローディング状態
     private val _isLoading = MutableStateFlow(false)
@@ -68,15 +83,33 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
             try {
                 Log.d("WeatherViewModel", "位置情報取得: lat=$currentLatitude, lon=$currentLongitude")
                 
-                val weatherData = weatherRepository.getBicycleWeatherForecast(currentLatitude, currentLongitude)
-                Log.d("WeatherViewModel", "天気データ取得成功: ${weatherData.size}件")
+                // 2日間の日別天気アドバイスデータのみを取得
+                val dailyAdviceData = weatherRepository.getDailyWeatherAdvice(currentLatitude, currentLongitude)
+                Log.d("WeatherViewModel", "2日間のアドバイスデータ取得成功: ${dailyAdviceData.size}件")
                 
                 val locationName = locationManager.getAddressFromLocation(currentLatitude, currentLongitude)
                 Log.d("WeatherViewModel", "地域名: $locationName")
                 
                 _currentLocation.value = locationName
-                _weatherData.value = weatherData
-                _uiState.value = WeatherUiState.Success(weatherData)
+                _dailyWeatherAdviceData.value = dailyAdviceData
+                
+                // 2日間のデータを自転車天気情報に変換
+                val bicycleWeatherData = dailyAdviceData.map { dailyAdvice ->
+                    val bicycleAdvice = dailyAdvice.advice.find { it.type == AdviceType.BICYCLE }
+                    BicycleWeatherInfo(
+                        date = dailyAdvice.date,
+                        temperature = dailyAdvice.temperature,
+                        weatherDescription = dailyAdvice.weatherDescription,
+                        humidity = dailyAdvice.humidity,
+                        windSpeed = dailyAdvice.windSpeed,
+                        precipitationProbability = dailyAdvice.precipitationProbability,
+                        isGoodForBicycle = bicycleAdvice?.isRecommended ?: false,
+                        reason = bicycleAdvice?.reason ?: "判定できません"
+                    )
+                }
+                
+                _weatherData.value = bicycleWeatherData
+                _uiState.value = WeatherUiState.Success(bicycleWeatherData)
                 
                 Log.d("WeatherViewModel", "UI状態更新完了: Success")
             } catch (e: Exception) {
@@ -89,10 +122,15 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
         }
     }
     
+    fun toggleTomorrowExpanded() {
+        _isTomorrowExpanded.value = !_isTomorrowExpanded.value
+    }
+    
     fun updateSearchQuery(query: String) {
-        _searchQuery.value = query
-        if (query.isNotEmpty()) {
-            performLocationSearch(query)
+        val trimmed = query.trim()
+        _searchQuery.value = trimmed
+        if (trimmed.isNotEmpty()) {
+            performLocationSearch(trimmed)
         } else {
             _searchResults.value = emptyList()
             _showSearchResults.value = false
@@ -136,11 +174,11 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
         currentLatitude = location.latitude
         currentLongitude = location.longitude
         
-        _searchQuery.value = location.getFullDisplayName()
+        _searchQuery.value = location.getShortDisplayName()
         _searchResults.value = emptyList()
         _showSearchResults.value = false
         
-        Log.d("WeatherViewModel", "Location selected: ${location.getFullDisplayName()}")
+        Log.d("WeatherViewModel", "Location selected: ${location.getDetailedDisplayName()}")
         
         // 新しい位置で天気データを再読み込み
         loadWeatherData()

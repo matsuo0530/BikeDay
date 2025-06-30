@@ -36,7 +36,7 @@ fun LocationSearchBar(
             value = searchQuery,
             onValueChange = onSearchQueryChange,
             label = { Text("地域を検索") },
-            placeholder = { Text("例: 東京、大阪、札幌...") },
+            placeholder = { Text("例: 東京、大阪、札幌、横浜、名古屋...") },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,
@@ -83,18 +83,33 @@ fun SearchResultsDropdown(
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(vertical = 8.dp)
-        ) {
-            items(searchResults) { location ->
-                LocationSearchResultItem(
-                    location = location,
-                    onClick = {
-                        onLocationSelected(location)
-                        onDismiss()
-                    }
+        if (searchResults.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "地域が見つかりませんでした",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                items(searchResults) { location ->
+                    LocationSearchResultItem(
+                        location = location,
+                        onClick = {
+                            onLocationSelected(location)
+                            onDismiss()
+                        }
+                    )
+                }
             }
         }
     }
@@ -117,16 +132,12 @@ fun LocationSearchResultItem(
             modifier = Modifier.weight(1f)
         ) {
             Text(
-                text = location.name,
+                text = location.getShortDisplayName(),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = if (location.state != null) {
-                    "${location.state}, ${location.country}"
-                } else {
-                    location.country
-                },
+                text = location.getDetailedDisplayName(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

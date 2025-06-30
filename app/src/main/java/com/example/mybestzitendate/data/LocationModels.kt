@@ -9,10 +9,42 @@ data class LocationSearchResult(
     val displayName: String
 ) {
     fun getFullDisplayName(): String {
-        return if (state != null) {
-            "$name, $state, $country"
-        } else {
-            "$name, $country"
+        return when {
+            // 日本の場合
+            country == "日本" -> {
+                when {
+                    state != null && state.isNotEmpty() -> "$state$name"
+                    else -> name
+                }
+            }
+            // その他の国の場合
+            state != null && state.isNotEmpty() -> "$name, $state, $country"
+            else -> "$name, $country"
+        }
+    }
+    
+    fun getShortDisplayName(): String {
+        return when {
+            country == "日本" -> {
+                when {
+                    state != null && state.isNotEmpty() -> "$state$name"
+                    else -> name
+                }
+            }
+            else -> name
+        }
+    }
+    
+    fun getDetailedDisplayName(): String {
+        return when {
+            country == "日本" -> {
+                when {
+                    state != null && state.isNotEmpty() -> "$state$name, $country"
+                    else -> "$name, $country"
+                }
+            }
+            state != null && state.isNotEmpty() -> "$name, $state, $country"
+            else -> "$name, $country"
         }
     }
 }
