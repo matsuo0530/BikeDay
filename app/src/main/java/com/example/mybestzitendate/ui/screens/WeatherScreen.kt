@@ -14,10 +14,13 @@ import com.example.mybestzitendate.ui.WeatherUiState
 import com.example.mybestzitendate.ui.components.LocationSearchBar
 import com.example.mybestzitendate.ui.components.WeatherCard
 import com.example.mybestzitendate.ui.components.TwoDayWeatherAdviceCard
+import com.example.mybestzitendate.ui.components.BottomNavigationBar
 
 @Composable
 fun WeatherScreen(
-    viewModel: WeatherViewModel = viewModel()
+    viewModel: WeatherViewModel = viewModel(),
+    currentRoute: String = "home",
+    onNavigate: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val currentLocation by viewModel.currentLocation.collectAsState()
@@ -32,133 +35,150 @@ fun WeatherScreen(
         viewModel.loadWeatherData()
     }
     
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
-        // タイトル
-        Text(
-            text = "2日間の天気アドバイス",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-        
-        // 地域検索バー
-        LocationSearchBar(
-            searchQuery = searchQuery,
-            onSearchQueryChange = viewModel::updateSearchQuery,
-            searchResults = searchResults,
-            isSearching = isSearching,
-            showSearchResults = showSearchResults,
-            onLocationSelected = viewModel::selectLocation,
-            onHideSearchResults = viewModel::hideSearchResults,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-        
-        // 現在の地域表示
-        Text(
-            text = "現在の地域: $currentLocation",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-        
-        // エラーメッセージ
-        error?.let { errorMessage ->
-            Card(
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 80.dp) // フッターの高さ分のパディング
+        ) {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
+                    .fillMaxSize()
+                    .padding(16.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = errorMessage,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                    TextButton(
-                        onClick = viewModel::clearError
+                // タイトル
+                Text(
+                    text = "2日間の天気アドバイス",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                // 地域検索バー
+                LocationSearchBar(
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = viewModel::updateSearchQuery,
+                    searchResults = searchResults,
+                    isSearching = isSearching,
+                    showSearchResults = showSearchResults,
+                    onLocationSelected = viewModel::selectLocation,
+                    onHideSearchResults = viewModel::hideSearchResults,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                // 現在の地域表示
+                Text(
+                    text = "現在の地域: $currentLocation",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                // エラーメッセージ
+                error?.let { errorMessage ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
                     ) {
-                        Text("閉じる")
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = errorMessage,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            TextButton(
+                                onClick = viewModel::clearError
+                            ) {
+                                Text("閉じる")
+                            }
+                        }
                     }
                 }
-            }
-        }
-        
-        // 天気データの表示
-        when (uiState) {
-            is WeatherUiState.Loading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-            
-            is WeatherUiState.Success -> {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // 2日間の天気アドバイスを表示
-                    if (dailyWeatherAdviceData.isNotEmpty()) {
-                        item {
-                            TwoDayWeatherAdviceCard(
-                                dailyAdviceList = dailyWeatherAdviceData,
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            )
+                
+                // 天気データの表示
+                when (uiState) {
+                    is WeatherUiState.Loading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
                         }
                     }
                     
-                    // 従来の自転車天気カードも表示（参考用）
-                    val weatherData = (uiState as WeatherUiState.Success).data
-                    items(weatherData) { weatherInfo ->
-                        WeatherCard(weatherInfo = weatherInfo)
-                    }
-                }
-            }
-            
-            is WeatherUiState.Error -> {
-                val errorMessage = (uiState as WeatherUiState.Error).message
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "エラーが発生しました",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = errorMessage,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = viewModel::loadWeatherData
+                    is WeatherUiState.Success -> {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("再試行")
+                            // 2日間の天気アドバイスを表示
+                            if (dailyWeatherAdviceData.isNotEmpty()) {
+                                item {
+                                    TwoDayWeatherAdviceCard(
+                                        dailyAdviceList = dailyWeatherAdviceData,
+                                        modifier = Modifier.padding(bottom = 16.dp)
+                                    )
+                                }
+                            }
+                            
+                            // 従来の自転車天気カードも表示（参考用）
+                            val weatherData = (uiState as WeatherUiState.Success).data
+                            items(weatherData) { weatherInfo ->
+                                WeatherCard(weatherInfo = weatherInfo)
+                            }
+                        }
+                    }
+                    
+                    is WeatherUiState.Error -> {
+                        val errorMessage = (uiState as WeatherUiState.Error).message
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "エラーが発生しました",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = errorMessage,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(
+                                    onClick = viewModel::loadWeatherData
+                                ) {
+                                    Text("再試行")
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+        
+        // フッターナビゲーション
+        BottomNavigationBar(
+            currentRoute = currentRoute,
+            onNavigate = onNavigate,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 } 

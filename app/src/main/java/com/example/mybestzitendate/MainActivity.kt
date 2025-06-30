@@ -8,9 +8,11 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.example.mybestzitendate.ui.WeatherViewModel
 import com.example.mybestzitendate.ui.screens.WeatherScreen
+import com.example.mybestzitendate.ui.screens.ProfileScreen
 import com.example.mybestzitendate.ui.theme.MyBestZitenDateTheme
 
 class MainActivity : ComponentActivity() {
@@ -25,9 +27,46 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    WeatherScreen(viewModel = viewModel)
+                    MainScreen(viewModel = viewModel)
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun MainScreen(
+    viewModel: WeatherViewModel
+) {
+    var currentRoute by remember { mutableStateOf("home") }
+    
+    when (currentRoute) {
+        "home" -> {
+            WeatherScreen(
+                viewModel = viewModel,
+                currentRoute = currentRoute,
+                onNavigate = { route ->
+                    currentRoute = route
+                }
+            )
+        }
+        "profile" -> {
+            ProfileScreen(
+                currentRoute = currentRoute,
+                onNavigate = { route ->
+                    currentRoute = route
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        else -> {
+            WeatherScreen(
+                viewModel = viewModel,
+                currentRoute = currentRoute,
+                onNavigate = { route ->
+                    currentRoute = route
+                }
+            )
         }
     }
 }
